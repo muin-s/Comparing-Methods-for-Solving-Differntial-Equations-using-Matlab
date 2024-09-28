@@ -1,0 +1,182 @@
+% Parameters
+a = 0;
+b = 1;
+N = 10 ;
+h = (b - a) / N;
+x = a:h:b;
+
+% Exact Solution
+IC = 1; % Initial condition
+y = (IC + 1) * exp(x) - x - 1; % partial integration
+
+% Euler Method Initial Condition
+w_euler = zeros(1, length(x));
+w_euler(1) = IC;
+
+% Modified Euler Method Initial Condition
+w_mod_euler = zeros(1, length(x));
+w_mod_euler(1) = IC;
+
+% Adams-Bashforth Predictor and Adams-Moulton Corrector Initial Condition
+w = zeros(1, length(x));
+w0 = zeros(1, length(x));
+w(1) = IC;
+w0(1) = IC;
+w(2) = y(2);
+w0(2) = y(2);
+
+% Taylor Series Initial Condition
+w_taylor = zeros(1, length(x));
+w_taylor(1) = IC;
+
+% Runge-Kutta 4th Order Initial Condition
+w_rk4 = zeros(1, length(x));
+w_rk4(1) = IC;
+
+% Runge-Kutta 2nd Order (RK2) Initial Condition
+w_rk2 = zeros(1, length(x));
+w_rk2(1) = IC;
+
+% Milne's Method Initial Condition
+w_milne = zeros(1, length(x));
+w_milne(1) = IC;
+
+% Euler Method
+for k = 1:N
+    w_euler(k+1) = w_euler(k) + h * myfun_xy(x(k), w_euler(k));
+end
+
+% Modified Euler Method (Heun's Method)
+for k = 1:N
+    predictor = w_mod_euler(k) + h * myfun_xy(x(k), w_mod_euler(k)); % Predictor step
+    w_mod_euler(k+1) = w_mod_euler(k) + h/2 * (myfun_xy(x(k), w_mod_euler(k)) + myfun_xy(x(k+1), predictor)); % Corrector step
+end
+
+% Adams-Bashforth Predictor and Adams-Moulton Corrector
+for k = 2:N
+    w0(k+1) = w(k) + h/3 * (3 * myfun_xy(x(k), w(k)) - myfun_xy(x(k-1), w(k-1)));
+    w(k+1) = w(k) + h/12 * (5* myfun_xy(x(k+1), w0(k+1)) +8* myfun_xy(x(k), w(k))- myfun_xy(x(k-1), w(k-1)));
+end
+
+% Taylor Series Method (2nd Order)
+for k = 1:N
+    w_taylor(k+1) = w_taylor(k) + h * myfun_xy(x(k), w_taylor(k)) + (h^2 / 2) * (-1 + myfun_xy(x(k), w_taylor(k)));
+end
+
+% Runge-Kutta 4th Order Method
+for k = 1:N
+    k1 = h * myfun_xy(x(k), w_rk4(k));
+    k2 = h * myfun_xy(x(k) + h/2, w_rk4(k) + k1/2);
+    k3 = h * myfun_xy(x(k) + h/2, w_rk4(k) + k2/2);
+    k4 = h * myfun_xy(x(k) + h/2, w_rk4(k) +k3 /2);
+    w_rk4(k+1) = w_rk4(k) + (1/6) * (k1 + 2*k2 + 2*k3 + k4);
+end
+
+% Runge-Kutta 2nd Order (Midpoint Method)
+for k = 1:N
+    k1 = h * myfun_xy(x(k), w_rk2(k));
+    k2 = h * myfun_xy(x(k) + h/2, w_rk2(k) + k1/2);
+    w_rk2(k+1) = w_rk2(k) +(k1+ k2)/2;
+end
+% Taylor Series Method (2nd Order) for y1, y2, y3 (for Milne's Initialization)
+for k = 1:3
+    w_milne(k+1) = w_milne(k) + h * myfun_xy(x(k), w_milne(k)) + (h^2 / 2) * (-1 + myfun_xy(x(k), w_milne(k)));
+end
+
+% Milne's Method
+for k = 4:N
+    % Predictor step
+    w_milne(k+1) = w_milne(k-3) + (4*h/3) * (2*myfun_xy(x(k), w_milne(k)) - myfun_xy(x(k-1), w_milne(k-1)) + 2*myfun_xy(x(k-2), w_milne(k-2)));
+    
+    % Corrector step
+    w_milne(k+1) = w_milne(k-1) + (h/3) * (myfun_xy(x(k+1), w_milne(k+1)) + 4*myfun_xy(x(k), w_milne(k)) + myfun_xy(x(k-1), w_milne(k-1)));
+end
+
+
+% Plotting
+% Create a new figure for both plots
+figure;
+
+% First plot (Comparison of Methods)
+subplot(1, 2, 1); % 1 row, 2 columns, first subplot
+plot(x, y, 'o-', 'Color', 'black', 'DisplayName', 'Exact'); % Include all time points
+hold on;
+plot(x, w_euler, 's:', 'Color', 'green', 'DisplayName', 'Euler Method');  
+plot(x, w_mod_euler, 'd:', 'Color', 'magenta', 'DisplayName', 'Modified Euler Method');
+plot(x, w0, 'v:', 'Color', 'blue', 'DisplayName', 'Adams-Bashforth Predictor');
+plot(x, w, '^:', 'Color', 'red', 'DisplayName', 'Adams-Moulton Corrector');
+plot(x, w_taylor, 'p:', 'Color', 'cyan', 'DisplayName', 'Taylor Series');
+plot(x, w_rk4, '*:', 'Color', 'yellow', 'DisplayName', 'Runge-Kutta 4th Order');
+plot(x, w_rk2, 'o:', 'Color', '#4B0082', 'DisplayName', 'Runge-Kutta 2nd Order');
+plot(x, w_milne, 'h:', 'Color', '#FFA500', 'DisplayName', 'Milnes Method');
+xlabel('x');
+ylabel('w values');
+legend;
+title('Comparison of Various Methods');
+
+% Second plot (Absolute Error)
+subplot(1, 2, 2); % 1 row, 2 columns, second subplot
+plot(x, abs_error_euler, 's-', 'Color', 'green', 'DisplayName', '|Euler w - y|');
+hold on;
+plot(x, abs_error_mod_euler, 'd-', 'Color', 'magenta', 'DisplayName', '|Modified Euler w - y|');
+plot(x, abs_error_adams, 'v-', 'Color', 'red', 'DisplayName', '|Adams w - y|');
+plot(x, abs_error_taylor, 'p-', 'Color', 'cyan', 'DisplayName', '|Taylor w - y|');
+plot(x, abs_error_rk4, '*-', 'Color', 'yellow', 'DisplayName', '|Runge-Kutta 4 w - y|');
+plot(x, abs_error_rk2, 'o-', 'Color', '#4B0082', 'DisplayName', '|Runge-Kutta 2 w - y|');
+plot(x, abs_error_milne, 'h-', 'Color', '#FFA500', 'DisplayName', '|Milne w - y|');
+xlabel('x');
+ylabel('Absolute Error');
+legend;
+title('Absolute Error in Various Methods');
+
+% Adjust the figure layout for better visibility
+set(gcf, 'Position', [100, 100, 1200, 500]); % Optional: Adjust the size of the figure window
+
+
+% Create Data Table
+abs_error_euler = abs(y - w_euler);
+abs_error_mod_euler = abs(y - w_mod_euler);
+abs_error_adams = abs(y - w);
+abs_error_taylor = abs(y - w_taylor);
+abs_error_rk4 = abs(y - w_rk4);
+abs_error_rk2 = abs(y - w_rk2); 
+abs_error_milne = abs(y - w_milne);
+
+data = table(x', w_euler', w_mod_euler', w0', w', w_taylor', w_rk4', w_rk2', w_milne', y', ...
+    abs_error_euler', abs_error_mod_euler', abs_error_adams', abs_error_taylor', abs_error_rk4', abs_error_rk2', abs_error_milne', ...
+    'VariableNames', {'x_ti', 'Euler_Method_w', 'Modified_Euler_Method_w', 'Adams_Predictor_w0', 'Adams_Corrector_w', ...
+                     'Taylor_Series_w', 'Runge-Kutta_4_w', 'Runge-Kutta_2_w', 'Milne_Method_w', 'Exact_y', ...
+                     '|Euler_w-y|', '|ModEuler_w-y|', '|Adams_w-y|', '|Taylor_w-y|', '|RK4_w-y|', '|RK2_w-y|', '|Milne_w-y|'});
+% Display Data Table
+disp(data);
+% Calculate total absolute error for each method
+total_error_euler = sum(abs_error_euler);
+total_error_mod_euler = sum(abs_error_mod_euler);
+total_error_adams = sum(abs_error_adams);
+total_error_taylor = sum(abs_error_taylor);
+total_error_rk4 = sum(abs_error_rk4);
+total_error_rk2 = sum(abs_error_rk2);
+total_error_milne = sum(abs_error_milne);
+
+% Display total errors in command window
+fprintf('Total Absolute Error for Each Method:\n');
+fprintf('Euler Method: %.10f\n', total_error_euler);
+fprintf('Modified Euler Method: %.10f\n', total_error_mod_euler);
+fprintf('Adams Method: %.10f\n', total_error_adams);
+fprintf('Taylor Series Method: %.10f\n', total_error_taylor);
+fprintf('Runge-Kutta 4th Order Method: %.10f\n', total_error_rk4);
+fprintf('Runge-Kutta 2nd Order Method: %.10f\n', total_error_rk2);
+fprintf('Milne''s Method: %.10f\n', total_error_milne);
+
+% Determine which method has the least total error
+[~, idx] = min([total_error_euler, total_error_mod_euler, total_error_adams, total_error_taylor, total_error_rk4, total_error_rk2, total_error_milne]);
+methods = {'Euler Method', 'Modified Euler Method', 'Adams Method', 'Taylor Series Method', 'Runge-Kutta 4th Order Method', 'Runge-Kutta 2nd Order Method', 'Milne''s Method'};
+
+% Display the best method
+fprintf('\nThe most accurate method is: %s\n', methods{idx});
+
+
+% Function Definition
+function dy = myfun_xy(x, y)
+    dy = x + y;
+end
